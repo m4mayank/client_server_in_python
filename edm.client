@@ -1,0 +1,55 @@
+#!/usr/local/bin/python3.7
+
+from argparse import ArgumentParser
+import sys
+import socket
+
+HEADER_LENGTH = 10
+def create_parser():
+    parser = ArgumentParser(description="Client")
+    parser.add_argument("ip",help="This is the IP of the server you are trying to connect to.")
+    parser.add_argument("port",type=int, help="Port on which server is running")
+    parser.add_argument("request",choices=["status", "reserve"], help="STATUS to know more about available seats and RESERVE to book a seat")
+    return parser
+
+def encapsulate(request):
+    message_header = f"{len(request):<{HEADER_LENGTH}}".encode('utf-8')
+    message = request.encode('utf-8')
+    return (message_header+message)
+
+def receive_msg(client_socket):
+    msg_header = client_socket.recv(HEADER_LENGTH)
+    if not len(msg_header):
+        print('Connection closed by the server')
+        sys.exit(1)
+    msg_length = int(msg_header.decode('utf-8').strip())
+    msg = client_socket.recv(msg_length).decode('utf-8')
+    return msg
+
+if __name__ == "__main__":
+    args=create_parser().parse_args()
+    try:
+        sock=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    except socket.error as e:
+    #except:
+        print(f"Error: {e}")
+        #print("Unable to create socket")
+        sys.exit(1)
+    try:
+        ip = socket.gethostbyname(args.ip)
+    except socket.gaierror as e:
+        print(f"Error: Unable to resolve the IP address")
+        sys.exit(1)
+    try:
+        sock.connect((ip, args.port))
+    except socket.error as e:
+        print(f"Error: {e}")
+        #print("Unable to connect to server")
+        sys.exit(1)
+    encapsulated_message = encapsulate(args.request)
+    try:
+        sock.sendto(encapsulated_message,(ip,args.port))
+    except:
+        print("Error sending the data")
+    server_response = receive_msg(sock)
+    print(server_response)

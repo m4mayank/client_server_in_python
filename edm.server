@@ -1,0 +1,64 @@
+#!/usr/local/bin/python3.7
+
+import socket
+import sys
+HEADER_LENGTH = 10
+
+seats = 5
+
+def create_socket():
+    try:
+        sock=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    except:
+        print("Unable to create socket")
+        sys.exit(0)
+
+    hostname = socket.gethostname()
+
+    try:
+        ip = socket.gethostbyname(hostname)
+    except socket.gaierror:
+        print(f"Error: Unable to resolve the host addess")
+        sys.exit(0)
+    try:
+        sock.bind((ip, 0))
+    except:
+        print("Unable to bind socket to IP and Port")
+        sys.exit(1)
+    sock.listen(4)
+    print(f"EDM is running on {sock.getsockname()[0]}, listening on port {sock.getsockname()[1]}")
+    return sock
+
+def receive_query(client_socket):
+    message_header = client_socket.recv(HEADER_LENGTH)
+    message_length = int(message_header.decode('utf-8').strip())
+    message = client_socket.recv(message_length).decode('utf-8')
+    return message
+
+def send_message(client_socket, msg):
+    msg_header = f"{len(msg):<{HEADER_LENGTH}}".encode('utf-8')
+    msg = msg.encode('utf-8')
+    try:
+        client_socket.send(msg_header+msg)
+    except:
+        print("Error sending the data to client")
+    finally:
+        client_socket.close()
+
+sock=create_socket()
+while True:
+    try:
+        client_socket, client_address = sock.accept()
+    except:
+        continue
+    message = receive_query(client_socket)
+    if message == "status":
+        response = f"Shuttle bus has {seats} spaces available"
+    else:
+        seats -= 1
+        response = f"Space Reserved. Shuttle bus now has {seats} spaces available."
+        if seats < 0:
+            response = f"Failed Reservation."
+
+    send_message(client_socket, response)
+
