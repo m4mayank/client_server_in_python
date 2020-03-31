@@ -1,4 +1,5 @@
 #!/usr/local/bin/python3.7
+#Refernce : https://pythonprogramming.net/pickle-objects-sockets-tutorial-python-3/?completed=/buffering-streaming-data-sockets-tutorial-python-3/
 
 from argparse import ArgumentParser
 import sys
@@ -6,6 +7,7 @@ import socket
 
 HEADER_LENGTH = 10
 def create_parser():
+    #function to parse arguments
     parser = ArgumentParser(description="Client")
     parser.add_argument("ip",help="This is the IP of the server you are trying to connect to.")
     parser.add_argument("port",type=int, help="Port on which server is running")
@@ -13,15 +15,17 @@ def create_parser():
     return parser
 
 def encapsulate(request):
+    #converting simple message into payload & header format
     message_header = f"{len(request):<{HEADER_LENGTH}}".encode('utf-8')
     message = request.encode('utf-8')
     return (message_header+message)
 
 def receive_msg(client_socket):
+    #Function to receive data over socket
     msg_header = client_socket.recv(HEADER_LENGTH)
     if not len(msg_header):
         print('Connection closed by the server')
-        sys.exit(1)
+        sys.exit(0)
     msg_length = int(msg_header.decode('utf-8').strip())
     msg = client_socket.recv(msg_length).decode('utf-8')
     return msg
@@ -31,23 +35,22 @@ if __name__ == "__main__":
     try:
         sock=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     except socket.error as e:
-    #except:
         print(f"Error: {e}")
-        #print("Unable to create socket")
-        sys.exit(1)
+        sys.exit(0)
     try:
         ip = socket.gethostbyname(args.ip)
-    except socket.gaierror as e:
+    except socket.gaierror:
         print(f"Error: Unable to resolve the IP address")
-        sys.exit(1)
+        sys.exit(0)
     try:
         sock.connect((ip, args.port))
     except socket.error as e:
         print(f"Error: {e}")
         #print("Unable to connect to server")
-        sys.exit(1)
+        sys.exit(0)
     encapsulated_message = encapsulate(args.request)
     try:
+        #Sending the message to server
         sock.sendto(encapsulated_message,(ip,args.port))
     except:
         print("Error sending the data")
